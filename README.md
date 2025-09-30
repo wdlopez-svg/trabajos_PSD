@@ -297,4 +297,161 @@ Este programa implementa un sistema de **alarma con buzzer** controlado mediante
 - Alarmas en maquinaria o laboratorios.  
 - Demostración de cómo integrar **múltiples interrupciones (externas e internas)** para coordinar diferentes eventos en un sistema.  
 
+# Reto 3.1: Contador Persistente de Encendidos  
 
+## Descripción  
+Este programa usa la **EEPROM del Arduino** para contar cuántas veces se ha encendido el sistema.  
+El valor del contador se guarda en la memoria no volátil, por lo que se mantiene incluso después de apagar o reiniciar la placa.  
+
+## Funcionamiento  
+- Al iniciar, el Arduino lee el valor del contador desde la dirección `0` de la EEPROM.  
+- Incrementa ese valor en `+1`.  
+- Escribe el nuevo valor en la misma dirección de la EEPROM.  
+- Muestra en el **Monitor Serial** el número de veces que la placa ha sido encendida.  
+
+## Conexiones  
+No requiere componentes externos. Solo es necesario conectar el Arduino al PC y abrir el **Monitor Serial**.  
+
+## Aplicaciones  
+- Contadores de encendidos o reinicios.  
+- Registro de uso de equipos electrónicos.  
+- Sistemas de mantenimiento predictivo donde se necesita saber el número de ciclos de trabajo.  
+
+# Reto 3.2: Menú de Configuración Persistente con EEPROM  
+
+## Descripción  
+Este programa permite al usuario seleccionar, mediante el **Monitor Serial**, qué LED encender (amarillo, azul o rojo).  
+La configuración se guarda en la **EEPROM** del Arduino, de modo que cuando la placa se reinicie, el último LED encendido se restaura automáticamente.  
+
+## Funcionamiento  
+- El usuario escribe en el Monitor Serial:  
+  - `1` → Enciende el LED amarillo.  
+  - `2` → Enciende el LED azul.  
+  - `3` → Enciende el LED rojo.  
+- La opción seleccionada se almacena en la EEPROM.  
+- Al iniciar, el Arduino recupera la última opción guardada y enciende el LED correspondiente sin necesidad de volver a configurarlo.  
+
+## Conexiones  
+- LED amarillo → Pin 11  
+- LED azul → Pin 12  
+- LED rojo → Pin 13  
+Cada LED debe conectarse en serie con una resistencia de **220 Ω** hacia GND.  
+
+## Aplicaciones  
+- Sistemas que necesitan **guardar configuraciones de usuario** (ejemplo: color de un indicador).  
+- Menús de ajustes que deben mantenerse tras un reinicio.  
+- Ejemplo básico de uso de **EEPROM con variables** para configuraciones persistentes.
+
+# Reto 4.1: Parpadeo Multitarea con FreeRTOS en Arduino
+
+## Descripción
+Este programa utiliza **FreeRTOS** para crear dos tareas que se ejecutan de manera concurrente en un Arduino.  
+Cada tarea controla un LED con un intervalo de parpadeo diferente, demostrando el funcionamiento del planificador de tareas sin necesidad de usar `delay()`.
+
+- **Tarea 1**: Hace parpadear el LED conectado al pin 8 cada **500 ms**.  
+- **Tarea 2**: Hace parpadear el LED conectado al pin 9 cada **1000 ms**.  
+
+El sistema operativo en tiempo real se encarga de administrar ambas tareas, permitiendo que funcionen de manera independiente y no bloqueante.
+
+## Conexiones
+- LED1 → Pin 8 (con resistencia de 220 Ω).  
+- LED2 → Pin 9 (con resistencia de 220 Ω).  
+- GND común para ambos LEDs.  
+
+## Conceptos Clave
+- Uso de **xTaskCreate()** para crear tareas.  
+- Uso de **vTaskDelay()** para retardos sin bloquear la CPU.  
+- Inicio del planificador con **vTaskStartScheduler()**.  
+
+## Aplicación
+Este ejercicio es la base para comprender cómo trabajar con múltiples procesos en paralelo usando un RTOS, lo que es útil en sistemas embebidos, IoT y aplicaciones donde se requieren respuestas rápidas y concurrentes.
+
+# Reto 4.2: Tareas con Diferentes Prioridades en FreeRTOS
+
+## Descripción
+Este programa implementa tres tareas concurrentes con **FreeRTOS** en un Arduino, cada una con distinta prioridad.  
+De esta manera se observa cómo el planificador asigna el uso de la CPU según la importancia de cada tarea.
+
+- **Tarea 1 (prioridad baja, 1):** Hace parpadear el LED en el pin 8 cada **500 ms**.  
+- **Tarea 2 (prioridad media, 2):** Lee el valor de un potenciómetro conectado al pin **A0** y lo muestra por el puerto serie cada **500 ms**.  
+- **Tarea 3 (prioridad alta, 3):** Hace parpadear el LED en el pin 9 cada **1000 ms**.  
+
+La CPU siempre dará preferencia a la tarea de mayor prioridad cuando esté lista para ejecutarse.
+
+## Conexiones
+- LED1 → Pin 8 (con resistencia de 220 Ω).  
+- LED2 → Pin 9 (con resistencia de 220 Ω).  
+- Potenciómetro → Pin A0 (terminal central), extremos a **5V** y **GND**.  
+
+## Conceptos Clave
+- Las tareas se crean con **xTaskCreate()**, asignando prioridad en el quinto parámetro.  
+- FreeRTOS interrumpe tareas de baja prioridad si una de mayor prioridad requiere ejecución.  
+- El uso de **vTaskDelay()** permite liberar la CPU para que otras tareas puedan ejecutarse.  
+
+## Aplicación
+Este ejemplo ayuda a comprender cómo manejar procesos concurrentes en sistemas embebidos, priorizando tareas críticas (como botones o sensores) sobre otras menos urgentes (como parpadeo de LEDs).
+
+# Reto 4.3: Sincronización con Semáforos en FreeRTOS
+
+## Descripción
+Este programa implementa dos tareas que comparten un recurso crítico: la **salida Serial**.  
+Para evitar que ambas escriban al mismo tiempo (y que los mensajes salgan mezclados), se utiliza un **mutex** (semáforo binario especial para exclusión mutua).
+
+- **Tarea 1:** Escribe un mensaje en Serial, tarda 1 segundo y libera el recurso.  
+- **Tarea 2:** También escribe en Serial, tarda 1 segundo y libera el recurso.  
+
+El **mutex garantiza** que solo una tarea pueda usar Serial a la vez.
+
+## Conexiones
+No se necesitan conexiones externas, solo el monitor Serial de Arduino.
+
+## Conceptos Clave
+- Un **mutex** funciona como una "llave" que solo una tarea puede tener a la vez.  
+- Las tareas usan `xSemaphoreTake()` para intentar obtener el recurso, y `xSemaphoreGive()` para liberarlo.  
+- Esto evita condiciones de **carrera** y asegura que el recurso compartido se use de forma ordenada.  
+- Los **delays** (`vTaskDelay()`) permiten observar claramente cómo se turnan las tareas.  
+
+## Aplicación
+Este ejemplo es útil para comprender cómo sincronizar tareas que comparten periféricos en sistemas embebidos.  
+Aplicaciones típicas:
+- Acceso controlado a pantallas LCD.  
+- Escritura ordenada en memoria EEPROM o SD.  
+- Comunicación Serial en proyectos con múltiples tareas.
+
+# Reto 4.4: Colas de mensajes en FreeRTOS
+
+## Descripción
+Este programa implementa tres tareas que se comunican a través de una **cola**.  
+El flujo de trabajo es el siguiente:
+
+- **Tarea de Lectura:** Lee la temperatura desde un sensor DHT11 y envía el valor a la cola.  
+- **Tarea de Procesamiento:** Recibe los datos de la cola, los muestra por Serial y enciende un LED si la temperatura supera un umbral definido.  
+- **Tarea de Monitoreo:** Muestra periódicamente un mensaje para confirmar que el sistema sigue activo.  
+
+De esta forma, las tareas trabajan **de manera concurrente y ordenada**, sin necesidad de variables globales compartidas.
+
+## Conexiones
+- **Sensor DHT11:**
+  - Señal → Pin 2 de Arduino  
+  - VCC → 5V  
+  - GND → GND  
+- **LED:**
+  - Ánodo (positivo) → Pin 13  
+  - Cátodo → Resistencia de 220 Ω → GND  
+
+## Conceptos Clave
+- Una **cola** permite que las tareas intercambien datos sin bloquearse entre sí.  
+- `xQueueSend()` coloca datos en la cola.  
+- `xQueueReceive()` extrae datos de la cola.  
+- El uso de la cola evita condiciones de carrera y asegura que los valores se transmitan en orden.  
+
+## Aplicación
+Este ejemplo es útil para sistemas en los que:
+- **Un sensor produce datos** (productor).  
+- **Otra tarea los procesa o decide acciones** (consumidor).  
+- Se requiere un sistema robusto que pueda manejar múltiples fuentes de información sin que se mezclen los datos.  
+
+Aplicaciones típicas:
+- Sistemas de monitoreo ambiental.  
+- Estaciones meteorológicas IoT.  
+- Procesos industriales donde sensores y actuadores trabajan en paralelo.
